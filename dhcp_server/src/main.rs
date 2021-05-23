@@ -127,5 +127,12 @@ fn select_lease_ip(
                 return Ok(ip_from_used);
             }
         }
+
+        while let Some(ip_addr) = dhcp_server.pick_available_ip() {
+            if util::is_ipaddr_available(ip_addr).is_ok() {
+                return Ok(ip_addr);
+            }
+        }
     }
+    Err(failure::err_msg("Could not obtain available ip address"))
 }
