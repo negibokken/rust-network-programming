@@ -32,6 +32,34 @@ pub fn select_addresses(
     }
 }
 
+pub fn count_records_by_mac_addr(
+    tx: &Transaction,
+    mac_addr: MacAddr,
+) -> Result<u8, failure::Error> {
+    let mut stmnt = tx.prepare("SELECT COUNT(*) FROM lease_entries WHERE mac_addr = ?")?;
+    let mut count_result = stmnt.query(params![mac_addr.to_string()])?;
+
+    let count: u8 = match count_result.next()? {
+        Some(row) => row.get(0)?,
+        None => {
+            return Err(failure::err_msg("No query returned"));
+        }
+    };
+    Ok(count)
+}
+
+pub fn insert_entry(
+    tx: &Transaction,
+    mac_addr: MacAddr,
+    ip_addr: Ipv4Addr,
+) -> Result<(), failure::Error> {
+    tx.execute(
+        "INSERT INTO lease_entries (mac_addr, ip_addr) VALUES (?1, ?2)",
+        params![mac_addr.to_string(), ip_addr.to_string()],
+    )?;
+    Ok(())
+}
+
 pub fn select_entry(
     con: &Connection,
     mac_addr: MacAddr,
@@ -46,4 +74,29 @@ pub fn select_entry(
         info!("specified MAC addr was not ffound.");
         Ok(None)
     }
+}
+
+pub fn update_entry(
+    tx: &Transaction,
+    mac_addr: MacAddr,
+    ip_addr: Ipv4Addr,
+    deleted: u8,
+) -> Result<(), failure::Error> {
+    tx.execute(
+        "UPDATE lease_entries SET ip_addr = ?2, deleted = ?3 WHERE mac_addr = ?1",
+        params![
+            mac_addr.to_string(),
+            ip_addr.to_string(),
+            deleted.to_string()
+        ],
+    )?;
+    Ok(())
+}
+
+pub fn delete_entry(tx: &Transaction, mac_addr: MacAddr) -> Result<(), failure::Error> {
+    tx.execute(
+        "UPDATE lease_entries SET delted = ?1 WHERE mac_addr = ?2",
+        params![1.to_string(), mac_addr.to_string()],
+    )?;
+    Ok(())
 }
